@@ -1,1 +1,1 @@
-# dna_foci_detection
+# Foci Detection
