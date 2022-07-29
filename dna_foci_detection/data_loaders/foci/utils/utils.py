@@ -17,9 +17,7 @@ def draw_label(label, img):
     for x, y, r in label:
         print(f"{x, y, r=}")
 
-        img = cv.circle(
-            img, (x, y), radius=r, color=(255, 255, 255), thickness=1,
-        )
+        img = cv.circle(img, (x, y), radius=r, color=(255, 255, 255), thickness=1,)
 
     return img
 

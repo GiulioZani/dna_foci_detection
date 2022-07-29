@@ -44,11 +44,9 @@ class CustomDataModule(pl.LightningDataModule):
             filenames=self.train_filenames,
             split="train",
             crop_size=self.params.crop_size,
-            out_len=self.out_len
+            out_len=self.out_len,
         )
-        return DataLoader(
-            dataset, batch_size=self.train_batch_size, shuffle=True
-        )
+        return DataLoader(dataset, batch_size=self.train_batch_size, shuffle=True)
 
     def val_dataloader(self):
         dataset = FociDataset(
@@ -56,11 +54,9 @@ class CustomDataModule(pl.LightningDataModule):
             filenames=self.val_filenames,
             split="val",
             crop_size=self.params.crop_size,
-            out_len=self.out_len
+            out_len=self.out_len,
         )
-        return DataLoader(
-            dataset, batch_size=self.test_batch_size, shuffle=True
-        )
+        return DataLoader(dataset, batch_size=self.test_batch_size, shuffle=True)
 
     def test_dataloader(self):
         dataset = FociDataset(
@@ -68,8 +64,6 @@ class CustomDataModule(pl.LightningDataModule):
             filenames=self.val_filenames,
             split="test",
             crop_size=self.params.crop_size,
-            out_len=self.out_len
+            out_len=self.out_len,
         )
-        return DataLoader(
-            dataset, batch_size=self.test_batch_size, shuffle=True
-        )
+        return DataLoader(dataset, batch_size=self.test_batch_size, shuffle=True)

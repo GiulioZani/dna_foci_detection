@@ -7,9 +7,12 @@ from .utils.utils import mat2gray_nocrop, plot_img_with_labels
 import os
 import random
 import ipdb
+from .visualize_predictions import draw_label_img
+from scipy.ndimage import gaussian_filter
+import monai
 
 
-def augmentation(img, label):
+def augmentation(img, label_img):
     """
     r = [torch_randint(2), torch_randint(2), torch_randint(4)]
     if r[0]:
@@ -28,19 +31,45 @@ def augmentation(img, label):
         img[:, :, k] = mat2gray_nocrop(img[:, :, k], [min_v, max_v]) - 0.5
 
     """
+    transforms = monai.transforms.Compose(
+        monai.transforms.RandAxisFlipd(keys=["image", "mask"], prob=0.5),
+        monai.transforms.RandRotate90d(keys=["image", "mask"], prob=0.5),
+        monai.transforms.RandGridDistortiond(
+            keys=["image", "mask"], prob=0.5, distort_limit=0.2
+        ),
+        monai.transforms.OneOf(
+            [
+                monai.transforms.RandShiftIntensityd(
+                    keys=["image"], prob=0.5, offsets=(0.1, 0.2)
+                ),
+                monai.transforms.RandAdjustContrastd(
+                    keys=["image"], prob=0.5, gamma=(1.5, 2.5)
+                ),
+                monai.transforms.RandHistogramShiftd(keys=["image"], prob=0.5),
+            ]
+        ),
+    )
+    uba = transforms(dict(image=img, mask=label_img))
+    img = uba["image"]
+    label_img = uba["mask"]
+    """
     if t.rand(1)[0] > 0.5:
-        # adds some gaussian noise to the image
+        img = t.flipud(img)
+        label_img = t.flipud(label_img)
+    if t.rand(1)[0] > 0.5:
+        img = t.fliplr(img)
+        label_img = t.fliplr(label_img)
+    if t.rand(1)[0] > 0.5:
+        '''
         img = img + t.randn(img.shape) * 0.05
-        # clips the image to be between 0 and 1
         img = t.clamp(img, 0, 1)
-
+        '''
     if t.rand(1)[0] > 0.5:
-        img = img.permute(1, 0, 2)
-        tmp_x = label[:, 1].clone()
-        label[:, 1] = label[:, 2]
-        label[:, 2] = tmp_x
-
-    return img, label
+        times = t.randint(4, (1,))[0]
+        img = t.rot90(img, k=times)
+        label_img = t.rot90(label_img, k=times)
+    """
+    return img, label_img
 
 
 class FociDataset(data.Dataset):
@@ -73,9 +102,9 @@ class FociDataset(data.Dataset):
         img = t.from_numpy(self.h5data[filename + "_image"][...]).permute(
             1, 2, 0
         )
-        label = t.from_numpy(self.h5data[filename + "_label"][...])[
-            : self.out_len
-        ]
+        label = t.from_numpy(self.h5data[filename + "_label"][...]).permute(
+            1, 2, 0
+        )
         if not self.split == "test":
             in_size = img.shape
             out_size = self.crop_size
@@ -85,6 +114,18 @@ class FociDataset(data.Dataset):
             img = img[
                 r[0] : r[0] + out_size[0], r[1] : r[1] + out_size[1], :,
             ]
+            label = label[
+                r[1] : r[1] + out_size[0],
+                r[0] : r[0] + out_size[1],
+                :,  # TODO: check this. Why do I need to swap the order of the two indices???
+            ]
+            label[:, :, 0] = t.from_numpy(
+                gaussian_filter(label[:, :, 0].numpy(), sigma=[2, 2])
+                * 59.5238
+                * 10
+            )
+            # draw_label_img(label, img)
+            """
             x_old, y_old = label[:, 1:-1].T
             x = t.clip(x_old * 292 - r[1], min=0)
             y = t.clip(y_old * 292 - r[0], min=0)
@@ -96,11 +137,28 @@ class FociDataset(data.Dataset):
             y /= out_size[1]
             label[:, 1] = x
             label[:, 2] = y
+            """
+        # nonzero_labels = label[label[:, 0] != 0]
+        # label_img = t.zeros(img.shape[0], img.shape[1], 2)
+        """
+        for nonzero_label in nonzero_labels:
+            label_img[
+                int(img.shape[0] * nonzero_label[1]),
+                int(img.shape[1] * nonzero_label[2]),
+                0,
+            ] = 1
+            label_img[
+                int(img.shape[0] * nonzero_label[1]),
+                int(img.shape[1] * nonzero_label[2]),
+                1,
+            ] = nonzero_label[-1]
         _, indices = t.sort(
             label[:, -1], descending=True
         )  # sort them in descending order of radius
         label = label[indices]
+        """
         if self.split == "train":
             img, label = augmentation(img, label)
         img = img.permute(2, 0, 1)
+        label = label.permute(2, 0, 1)
         return img, label
