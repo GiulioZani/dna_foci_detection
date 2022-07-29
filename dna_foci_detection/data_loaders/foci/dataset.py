@@ -31,11 +31,13 @@ def augmentation(img, label_img):
         img[:, :, k] = mat2gray_nocrop(img[:, :, k], [min_v, max_v]) - 0.5
 
     """
+    tmp_img = t.cat([img, label_img], dim=-1)
+
     transforms = monai.transforms.Compose(
-        monai.transforms.RandAxisFlipd(keys=["image", "mask"], prob=0.5),
-        monai.transforms.RandRotate90d(keys=["image", "mask"], prob=0.5),
+        monai.transforms.RandAxisFlipd(keys=["image"], prob=0.5),
+        monai.transforms.RandRotate90d(keys=["image"], prob=0.5),
         monai.transforms.RandGridDistortiond(
-            keys=["image", "mask"], prob=0.5, distort_limit=0.2
+            keys=["image"], prob=0.5, distort_limit=0.2
         ),
         monai.transforms.OneOf(
             [
@@ -49,9 +51,11 @@ def augmentation(img, label_img):
             ]
         ),
     )
-    uba = transforms(dict(image=img, mask=label_img))
-    img = uba["image"]
-    label_img = uba["mask"]
+    uba = transforms(dict(image=img))
+    img = uba["image"][:, :, :3]
+    #print(f"{img.shape=}")
+    label_img = uba["image"][:, :, -2:]
+    #print(f"{label_img.shape=}")
     """
     if t.rand(1)[0] > 0.5:
         img = t.flipud(img)
