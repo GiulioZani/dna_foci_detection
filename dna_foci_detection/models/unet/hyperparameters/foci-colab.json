@@ -51,6 +51,5 @@
     "max_epochs": 100,
     "early_stopping_patience": 5,
     "data_location": "/content/drive/MyDrive/foci_detection.hdf5",
-    "data_loader": "foci",
-    "normalization": "none",
+    "data_loader": "foci"
 }
