@@ -21,7 +21,8 @@ def draw_label_img(label_img, img, color=(1, 0, 1)):
         label_img.shape[:-1] == img.shape[:-1]
     ), f"{label_img.shape=} not compatible with {img.shape=}"
     indices = t.where(
-        (label_img[:, :, 0] >= label_img[:, :, 0].max()) & (label_img[:, :, 1] > 0)
+        (label_img[:, :, 0] >= label_img[:, :, 0].max())
+        & (label_img[:, :, 1] > 0)
     )  # confidence > 0.8 and radius > 0
     indices = t.tensor([indices[0].tolist(), indices[1].tolist()]).T
     labels = []
@@ -40,22 +41,24 @@ def draw_label(raw_label, img, color=(1, 1, 1)):
     min_radius = 0.0014044943820224719
     label = raw_label.clone()
     label = label[label[:, 0] > 0, 1:]
-    label[:, -1] = (label[:, -1] * (max_radius - min_radius) + min_radius) * img.shape[
-        0
-    ]
+    label[:, -1] = (
+        label[:, -1] * (max_radius - min_radius) + min_radius
+    ) * img.shape[0]
     label = t.round(label).int().tolist()
     img = np.array(img.tolist())
     for x, y, r in label:
         img = cv.circle(img, (x, y), radius=r, color=color, thickness=1)
     return img
 
+
 def sharpen(label):
-    kernel = np.array([
-              [0, -1, 0],
-               [-1, 5,-1],
-               [0, -1, 0]])
-    sharpened_label = cv.filter2D(src=label[0].cpu().numpy(), ddepth=-1, kernel=kernel)
-    sharpened_label = cv.filter2D(src=sharpened_label, ddepth=-1, kernel=kernel)
+    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    sharpened_label = cv.filter2D(
+        src=label[0].cpu().numpy(), ddepth=-1, kernel=kernel
+    )
+    sharpened_label = cv.filter2D(
+        src=sharpened_label, ddepth=-1, kernel=kernel
+    )
     return sharpened_label
 
 
@@ -77,19 +80,23 @@ def visualize_predictions(
         # print(f"{img.shape=}")
         # print(f"{img.shape=}")
         img = t.from_numpy(
-            draw_label_img(pred_label.cpu(), img.cpu().numpy(), color=(1, 0, 1))
+            draw_label_img(
+                pred_label.cpu(), img.cpu().numpy(), color=(1, 0, 1)
+            )
         )
-        img = t.from_numpy(draw_label_img(label.cpu(), img.cpu().numpy(), color=(0, 1, 0)))
+        img = t.from_numpy(
+            draw_label_img(label.cpu(), img.cpu().numpy(), color=(0, 1, 0))
+        )
         axes[0][index].imshow(img)
-        #sharpened_label = sharpen(label)
+        # sharpened_label = sharpen(label)
         sharpened_label = label[0].cpu()
         axes[1][index].imshow(sharpened_label)
-        #sharpened_pred_label = sharpen(pred_label)
+        # sharpened_pred_label = sharpen(pred_label)
         sharpened_pred_label = pred_label[0].detach().cpu()
         axes[2][index].imshow(sharpened_pred_label)
 
         # axes[1][index]
-    plt.title(f"Epoch {epoch}")
+    plt.suptitle(f"Epoch {epoch}")
     plt.savefig(save_path, dpi=300) if not plot else plt.show()
     plt.clf()
     plt.close()
@@ -126,7 +133,9 @@ class Model(LightningModule):
         avg_loss = t.stack([x["loss"] for x in outputs]).mean()
         self.log("train_loss", avg_loss, prog_bar=True)
 
-    def validation_step(self, batch: tuple[t.Tensor, t.Tensor], batch_idx: int):
+    def validation_step(
+        self, batch: tuple[t.Tensor, t.Tensor], batch_idx: int
+    ):
         x, labels = batch
         y_pred = self.classifier(x)
         loss = self.loss(y_pred, labels)
@@ -170,4 +179,6 @@ class Model(LightningModule):
         return {"test_loss": avg_loss}
 
     def configure_optimizers(self):
-        return mate.Optimizer(self.params.configure_optimizers, self.classifier)()
+        return mate.Optimizer(
+            self.params.configure_optimizers, self.classifier
+        )()
