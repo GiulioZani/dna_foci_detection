@@ -15,10 +15,10 @@ import cv2 as cv
 from tqdm import tqdm
 
 sys.path.insert(0, "../utils")
-from utils.utils import plot_img_with_labels
-from utils.check_outsiders import check_outsiders
-from utils.get_overlaped_points import get_overlaped_points
-from visualize_predictions import draw_label_img
+# from utils.utils import plot_img_with_labels
+# from utils.check_outsiders import check_outsiders
+# from utils.get_overlaped_points import get_overlaped_points
+# from visualize_predictions import draw_label_img
 
 # src_path = '../../data_zenodo/part2'
 src_path = "/mnt/deep_foci/new_images"
@@ -29,14 +29,18 @@ dst_hdf5_file = "/mnt/foci_detection.hdf5"
 
 # img_filenames = glob(src_path + "/**/data_53BP1.tif", recursive=True)
 img_filenames = [
-    os.path.join(src_path, p) for p in os.listdir(src_path) if p.endswith("png")
+    os.path.join(src_path, p)
+    for p in os.listdir(src_path)
+    if p.endswith("png")
 ]  # glob(src_path + "/**/data_53BP1.tif", recursive=True)
 # print(f"{json.dumps(img_filenames, indent=4)}")
 
 # resized_img_size = [505, 681, 48]  # image is resized to this size
 resized_img_size = [505, 681]  # image is resized to this size
 
-normalization_percentile = 0.0001  # image is normalized into this percentile range
+normalization_percentile = (
+    0.0001  # image is normalized into this percentile range
+)
 
 
 if not os.path.exists(split(dst_hdf5_file)[0]):
@@ -57,11 +61,16 @@ if os.path.exists(dst_hdf5_file):
 
 labels = tuple(glob.glob(src_labels + "/*.json"))
 with h5py.File(dst_hdf5_file, "w") as hdf5:
-    for file_num, img_filename in enumerate(glob.glob(os.path.join(src_path, "*.png"))):
+    for file_num, img_filename in enumerate(
+        glob.glob(os.path.join(src_path, "*.png"))
+    ):
         print(f"{img_filename=}")
-        img = (t.from_numpy(imageio.imread(img_filename)) / 255).permute(2, 0, 1)
+        img = (t.from_numpy(imageio.imread(img_filename)) / 255).permute(
+            2, 0, 1
+        )
         label_file_name = os.path.join(
-            src_labels, os.path.basename(img_filename.replace(".png", ".json")),
+            src_labels,
+            os.path.basename(img_filename.replace(".png", ".json")),
         )
         label = t.zeros(2, img.shape[1], img.shape[2])
         # label = t.zeros(60, 4)
