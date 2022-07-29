@@ -53,9 +53,9 @@ def augmentation(img, label_img):
     )
     uba = transforms(dict(image=img))
     img = uba["image"][:, :, :3]
-    #print(f"{img.shape=}")
+    # print(f"{img.shape=}")
     label_img = uba["image"][:, :, -2:]
-    #print(f"{label_img.shape=}")
+    # print(f"{label_img.shape=}")
     """
     if t.rand(1)[0] > 0.5:
         img = t.flipud(img)
@@ -163,6 +163,10 @@ class FociDataset(data.Dataset):
         """
         if self.split == "train":
             img, label = augmentation(img, label)
+        else:
+            label = label.permute(
+                0, 2, 1
+            )  # TODO: check this. Why do I need to swap them??
         img = img.permute(2, 0, 1)
         label = label.permute(2, 0, 1)
         return img, label
