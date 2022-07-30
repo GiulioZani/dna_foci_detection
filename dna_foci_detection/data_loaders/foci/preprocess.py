@@ -30,18 +30,14 @@ def main():
 
     # img_filenames = glob(src_path + "/**/data_53BP1.tif", recursive=True)
     img_filenames = [
-        os.path.join(src_path, p)
-        for p in os.listdir(src_path)
-        if p.endswith("png")
+        os.path.join(src_path, p) for p in os.listdir(src_path) if p.endswith("png")
     ]  # glob(src_path + "/**/data_53BP1.tif", recursive=True)
     # print(f"{json.dumps(img_filenames, indent=4)}")
 
     # resized_img_size = [505, 681, 48]  # image is resized to this size
     resized_img_size = [505, 681]  # image is resized to this size
 
-    normalization_percentile = (
-        0.0001  # image is normalized into this percentile range
-    )
+    normalization_percentile = 0.0001  # image is normalized into this percentile range
 
     if not os.path.exists(split(dst_hdf5_file)[0]):
         os.makedirs(split(dst_hdf5_file)[0])
@@ -63,12 +59,9 @@ def main():
             glob.glob(os.path.join(src_path, "*.png"))
         ):
             print(f"{img_filename=}")
-            img = (t.from_numpy(imageio.imread(img_filename)) / 255).permute(
-                2, 0, 1
-            )
+            img = (t.from_numpy(imageio.imread(img_filename)) / 255).permute(2, 0, 1)
             label_file_name = os.path.join(
-                src_labels,
-                os.path.basename(img_filename.replace(".png", ".json")),
+                src_labels, os.path.basename(img_filename.replace(".png", ".json")),
             )
             label = t.zeros(2, img.shape[1], img.shape[2])
             # label = t.zeros(60, 4)

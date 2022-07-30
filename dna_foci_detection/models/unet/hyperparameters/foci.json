@@ -52,6 +52,5 @@
     "early_stopping_patience": 5,
     "data_location": "/mnt/foci_detection.hdf5",
     "data_loader": "foci",
-    "normalization": "none",
     "save_path": "/mnt/dna_foci_results/models/unet/results/foci"
 }

@@ -12,7 +12,7 @@ import cv2 as cv
 
 
 def draw_label(label, img, color=(1, 1, 1)):
-    #label = label.clone()
+    # label = label.clone()
     label = label[label[:, 0] > 0, 1:]
     label *= img.shape[0]
     label[:, -1] *= 0.01544943820224719
@@ -23,21 +23,24 @@ def draw_label(label, img, color=(1, 1, 1)):
     return img
 
 
-def visualize_predictions(img, labels, pred_labels, save_path:str, epoch=-1):
+def visualize_predictions(img, labels, pred_labels, save_path: str, epoch=-1):
     # fig, axes = plt.subplots(1, 2)
     # axes[0].imshow(img.permute(1, 2, 0))
     # axes[1].imshow(mask_from_label(labels))
     img = img.permute(1, 2, 0)
     pred_labels = pred_labels[pred_labels[:, 0] >= 0.5]
-    #print(f"{img.shape=}")
+    # print(f"{img.shape=}")
     img = t.from_numpy(draw_label(labels.cpu(), img.cpu().numpy()))
-    #print(f"{img.shape=}")
-    img = t.from_numpy(draw_label(pred_labels.cpu(), img.cpu().numpy(), color=(1, 0, 1)))
+    # print(f"{img.shape=}")
+    img = t.from_numpy(
+        draw_label(pred_labels.cpu(), img.cpu().numpy(), color=(1, 0, 1))
+    )
     plt.title(f"Epoch {epoch}")
     plt.imshow(img)
     plt.savefig(save_path, dpi=300)
     plt.clf()
     plt.close()
+
 
 class BaseClassificationModel(LightningModule):
     def __init__(self, params: Namespace):
@@ -66,7 +69,13 @@ class BaseClassificationModel(LightningModule):
         y_pred = self.classifier(x)
         loss = self.loss(y_pred, labels)
         if batch_idx == 0:
-            visualize_predictions(x[0], labels[0], y_pred[0], os.path.join(self.params.save_path, "pred.png"), epoch=self.current_epoch)
+            visualize_predictions(
+                x[0],
+                labels[0],
+                y_pred[0],
+                os.path.join(self.params.save_path, "pred.png"),
+                epoch=self.current_epoch,
+            )
         return {
             "val_loss": loss,
         }

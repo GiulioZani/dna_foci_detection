@@ -47,19 +47,34 @@ def draw_label(raw_label, img, color=(1, 1, 1)):
     label = t.round(label).int().tolist()
     img = np.array(img.tolist())
     for x, y, r in label:
-        img = cv.circle(img, (x, y), radius=r, color=color, thickness=1)
+        img = cv.circle(img, (y, x), radius=r, color=color, thickness=1)
     return img
 
 
-def sharpen(label):
-    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    sharpened_label = cv.filter2D(
-        src=label[0].cpu().numpy(), ddepth=-1, kernel=kernel
-    )
-    sharpened_label = cv.filter2D(
-        src=sharpened_label, ddepth=-1, kernel=kernel
-    )
-    return sharpened_label
+def sharpen(img):
+    # kernel = np.array([[-1,-1,-1, -1, -1], [-1, -1, 15, -1, -1], [-1, -1, -1, -1, -1]])
+    size = 3
+    # kernel = np.zeros((size, size)) - 1
+    # kernel[size // 2, size //2] = int(size**2 - 1)
+    # img = cv.filter2D(
+    #    src=img, ddepth=-1, kernel=kernel
+    # )
+    size = 17
+    kernel = np.zeros((size, size)) - 1
+    kernel[size // 2, size // 2] = int(size ** 2 - 1)
+    img = cv.filter2D(src=img, ddepth=-1, kernel=kernel)
+
+    # img = cv.filter2D(
+    #    src=img, ddepth=-1, kernel=kernel
+    # )
+    # img = cv.filter2D(
+    #    src=img, ddepth=-1, kernel=kernel
+    # )
+    # sharpened_label = cv.filter2D(
+    #    src=sharpened_label, ddepth=-1, kernel=kernel
+    # )
+    # img = np.clip(img, 0, img.max())
+    return (img - img.min()) / (img.max() - img.min())
 
 
 def visualize_predictions(
@@ -70,7 +85,9 @@ def visualize_predictions(
     # axes[1].imshow(mask_from_label(labels))
     # ipdb.set_trace()
     indices = [i for i in range(len(labels)) if (labels[i] > 0).any()][:2]
-    _, axes = plt.subplots(nrows=3, ncols=len(indices))
+    if len(indices) < 2:
+        return
+    fig, axes = plt.subplots(nrows=3, ncols=len(indices))
     for index, i in enumerate(indices):
         img = imgs[i]
         label = labels[i]
@@ -87,17 +104,24 @@ def visualize_predictions(
         img = t.from_numpy(
             draw_label_img(label.cpu(), img.cpu().numpy(), color=(0, 1, 0))
         )
-        axes[0][index].imshow(img)
-        # sharpened_label = sharpen(label)
-        sharpened_label = label[0].cpu()
-        axes[1][index].imshow(sharpened_label)
-        # sharpened_pred_label = sharpen(pred_label)
-        sharpened_pred_label = pred_label[0].detach().cpu()
-        axes[2][index].imshow(sharpened_pred_label)
+        fig = axes[0][index].imshow(img)
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
+        sharpened_label = label[0].detach().cpu().numpy()
+        sharpened_label = sharpen(sharpened_label)
+        fig = axes[1][index].imshow(sharpened_label)
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
+        sharpened_pred_label = pred_label[0].detach().cpu().numpy()
+        sharpened_pred_label = sharpen(sharpened_pred_label)
+        fig = axes[2][index].imshow(sharpened_pred_label)
+        fig.axes.get_xaxis().set_visible(False)
+        fig.axes.get_yaxis().set_visible(False)
 
-        # axes[1][index]
+    plt.axis("off")
+    plt.tight_layout()
     plt.suptitle(f"Epoch {epoch}")
-    plt.savefig(save_path, dpi=300) if not plot else plt.show()
+    plt.savefig(save_path, dpi=400) if not plot else plt.show()
     plt.clf()
     plt.close()
 
@@ -109,6 +133,7 @@ class Model(LightningModule):
         self.classifier: t.nn.Module
         self.criterion = t.nn.BCELoss()
         self.loss = lambda x, y: self.criterion(x.flatten(), y.flatten())
+        self.best_loss = float("inf")
 
     def forward(self, z: t.Tensor) -> t.Tensor:
         out = self.classifier(z)
@@ -153,6 +178,19 @@ class Model(LightningModule):
 
     def validation_epoch_end(self, outputs):
         avg_loss = t.stack([x["val_loss"] for x in outputs]).mean()
+        if avg_loss < self.best_loss:
+            self.best_loss = avg_loss
+            print("Model reached new best. Saving it.")
+            for torch_model_name in self.params.model:
+                with open(
+                    os.path.join(
+                        self.params.save_path,
+                        "checkpoint",
+                        torch_model_name + ".pt",
+                    ),
+                    "wb",
+                ) as f:
+                    t.save(self.__getattr__(torch_model_name), f)
         self.log("val_loss", avg_loss, prog_bar=True)
         return {"val_loss": avg_loss}
 

@@ -25,8 +25,7 @@ class CustomDataModule(pl.LightningDataModule):
         self.train_batch_size = params.train_batch_size
         self.test_batch_size = params.test_batch_size
 
-        num_workers = os.cpu_count()
-        self.num_workers = num_workers
+        self.num_workers = os.cpu_count()
         with h5py.File(params.data_location, "r") as h5data:
             filenames = np.array(
                 [file[:-6] for file in list(h5data.keys()) if "image" in file]
@@ -34,7 +33,7 @@ class CustomDataModule(pl.LightningDataModule):
         permuted_indices = t.randperm(len(filenames))
         valid_size = int(len(filenames) * 0.1)
         self.val_filenames = filenames[permuted_indices[:valid_size]]
-        self.test_filenames = filenames[permuted_indices[:valid_size]]
+        self.test_filenames = self.val_filenames
         self.train_filenames = filenames[permuted_indices[2 * valid_size :]]
         self.out_len = params.out_len
 
@@ -46,7 +45,12 @@ class CustomDataModule(pl.LightningDataModule):
             crop_size=self.params.crop_size,
             out_len=self.out_len,
         )
-        return DataLoader(dataset, batch_size=self.train_batch_size, shuffle=True)
+        return DataLoader(
+            dataset,
+            batch_size=self.train_batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+        )
 
     def val_dataloader(self):
         dataset = FociDataset(
@@ -56,7 +60,12 @@ class CustomDataModule(pl.LightningDataModule):
             crop_size=self.params.crop_size,
             out_len=self.out_len,
         )
-        return DataLoader(dataset, batch_size=self.test_batch_size, shuffle=True)
+        return DataLoader(
+            dataset,
+            batch_size=self.test_batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+        )
 
     def test_dataloader(self):
         dataset = FociDataset(
@@ -66,4 +75,9 @@ class CustomDataModule(pl.LightningDataModule):
             crop_size=self.params.crop_size,
             out_len=self.out_len,
         )
-        return DataLoader(dataset, batch_size=self.test_batch_size, shuffle=True)
+        return DataLoader(
+            dataset,
+            batch_size=self.test_batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+        )

@@ -12,7 +12,32 @@ from scipy.ndimage import gaussian_filter
 import monai
 
 
-def augmentation(img, label_img):
+def torch_randint(max_v):
+    return t.randint(max_v, (1, 1)).view(-1).numpy()[0]
+
+
+def torch_rand(size=1):
+    return t.rand(size).numpy()
+
+
+def augmentation(img, mask):
+    img = img.numpy()
+    mask = mask.numpy()
+    r = [torch_randint(2), torch_randint(2), torch_randint(4)]
+    if r[0]:
+        img = np.fliplr(img)
+        mask = np.fliplr(mask)
+    if r[1]:
+        img = np.flipud(img)
+        mask = np.flipud(mask)
+    img = np.rot90(img, k=r[2])
+    mask = np.rot90(mask, k=r[2])
+
+    # min_v = (torch_rand() * 0.96) - 0.48
+    # max_v = 1 + (torch_rand() * 0.96) - 0.48
+    # for k in range(img.shape[-1]):
+    #    img[:, :, k] = mat2gray_nocrop(img[:, :, k], [min_v, max_v]) - 0.5
+
     """
     r = [torch_randint(2), torch_randint(2), torch_randint(4)]
     if r[0]:
@@ -31,6 +56,7 @@ def augmentation(img, label_img):
         img[:, :, k] = mat2gray_nocrop(img[:, :, k], [min_v, max_v]) - 0.5
 
     """
+    """
     tmp_img = t.cat([img, label_img], dim=-1)
 
     transforms = monai.transforms.Compose(
@@ -44,18 +70,19 @@ def augmentation(img, label_img):
                 monai.transforms.RandShiftIntensityd(
                     keys=["image"], prob=0.5, offsets=(0.1, 0.2)
                 ),
-                monai.transforms.RandAdjustContrastd(
-                    keys=["image"], prob=0.5, gamma=(1.5, 2.5)
-                ),
-                monai.transforms.RandHistogramShiftd(keys=["image"], prob=0.5),
+                # monai.transforms.RandAdjustContrastd(
+                #    keys=["image"], prob=0.5, gamma=(1.5, 2.5)
+                # ),
+                # monai.transforms.RandHistogramShiftd(keys=["image"], prob=0.5),
             ]
         ),
     )
-    uba = transforms(dict(image=img))
+    uba = transforms(dict(image=tmp_img))
     img = uba["image"][:, :, :3]
     # print(f"{img.shape=}")
     label_img = uba["image"][:, :, -2:]
     # print(f"{label_img.shape=}")
+    """
     """
     if t.rand(1)[0] > 0.5:
         img = t.flipud(img)
@@ -73,7 +100,7 @@ def augmentation(img, label_img):
         img = t.rot90(img, k=times)
         label_img = t.rot90(label_img, k=times)
     """
-    return img, label_img
+    return t.from_numpy(img.copy()), t.from_numpy(mask.copy())
 
 
 class FociDataset(data.Dataset):
@@ -103,45 +130,36 @@ class FociDataset(data.Dataset):
             self.h5data = h5py.File(self.hdf5_filename, "r")
 
         filename = self.filenames[idx]
-        img = t.from_numpy(self.h5data[filename + "_image"][...]).permute(
-            1, 2, 0
+        img = t.from_numpy(self.h5data[filename + "_image"][...]).permute(1, 2, 0)
+        label = t.from_numpy(self.h5data[filename + "_label"][...]).permute(1, 2, 0)
+        in_size = img.shape
+        out_size = self.crop_size
+        r = [t.randint(in_size[i] - out_size[i], (1,))[0] for i in range(2)]
+        img = img[
+            r[0] : r[0] + out_size[0], r[1] : r[1] + out_size[1], :,
+        ]
+        label = label[
+            r[1] : r[1] + out_size[0],
+            r[0] : r[0] + out_size[1],
+            :,  # TODO: check this. Why do I need to swap the order of the two indices???
+        ]
+        label[:, :, 0] = t.from_numpy(
+            gaussian_filter(label[:, :, 0].numpy(), sigma=[2, 2]) * 59.5238 * 10
         )
-        label = t.from_numpy(self.h5data[filename + "_label"][...]).permute(
-            1, 2, 0
-        )
-        if not self.split == "test":
-            in_size = img.shape
-            out_size = self.crop_size
-            r = [
-                t.randint(in_size[i] - out_size[i], (1,))[0] for i in range(2)
-            ]
-            img = img[
-                r[0] : r[0] + out_size[0], r[1] : r[1] + out_size[1], :,
-            ]
-            label = label[
-                r[1] : r[1] + out_size[0],
-                r[0] : r[0] + out_size[1],
-                :,  # TODO: check this. Why do I need to swap the order of the two indices???
-            ]
-            label[:, :, 0] = t.from_numpy(
-                gaussian_filter(label[:, :, 0].numpy(), sigma=[2, 2])
-                * 59.5238
-                * 10
-            )
-            # draw_label_img(label, img)
-            """
-            x_old, y_old = label[:, 1:-1].T
-            x = t.clip(x_old * 292 - r[1], min=0)
-            y = t.clip(y_old * 292 - r[0], min=0)
-            filter_indices = (x > out_size[0]) | (y > out_size[1])
-            x[filter_indices] = 0
-            y[filter_indices] = 0
-            label[filter_indices, 0] = 0
-            x /= out_size[0]
-            y /= out_size[1]
-            label[:, 1] = x
-            label[:, 2] = y
-            """
+        # draw_label_img(label, img)
+        """
+        x_old, y_old = label[:, 1:-1].T
+        x = t.clip(x_old * 292 - r[1], min=0)
+        y = t.clip(y_old * 292 - r[0], min=0)
+        filter_indices = (x > out_size[0]) | (y > out_size[1])
+        x[filter_indices] = 0
+        y[filter_indices] = 0
+        label[filter_indices, 0] = 0
+        x /= out_size[0]
+        y /= out_size[1]
+        label[:, 1] = x
+        label[:, 2] = y
+        """
         # nonzero_labels = label[label[:, 0] != 0]
         # label_img = t.zeros(img.shape[0], img.shape[1], 2)
         """
@@ -161,12 +179,13 @@ class FociDataset(data.Dataset):
         )  # sort them in descending order of radius
         label = label[indices]
         """
-        if self.split == "train":
-            img, label = augmentation(img, label)
-        else:
-            label = label.permute(
-                0, 2, 1
-            )  # TODO: check this. Why do I need to swap them??
+        # if self.split == "train":
+        #    img, label = augmentation(img, label)
+        # else:
+        #    label = label.permute(
+        #        1, 0, 2
+        #    )  # TODO: check this. Why do I need to swap them??
+        label = label.permute(1, 0, 2)
         img = img.permute(2, 0, 1)
         label = label.permute(2, 0, 1)
         return img, label
