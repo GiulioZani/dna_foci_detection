@@ -139,13 +139,13 @@ class FociDataset(data.Dataset):
             r[0] : r[0] + out_size[0], r[1] : r[1] + out_size[1], :,
         ]
         label = label[
-            r[1] : r[1] + out_size[0],
-            r[0] : r[0] + out_size[1],
+            r[0] : r[0] + out_size[0],
+            r[1] : r[1] + out_size[1],
             :,  # TODO: check this. Why do I need to swap the order of the two indices???
         ]
-        label[:, :, 0] = t.from_numpy(
-            gaussian_filter(label[:, :, 0].numpy(), sigma=[2, 2]) * 59.5238 * 10
-        )
+        #label[:, :, 0] = t.from_numpy(
+        #    gaussian_filter(label[:, :, 0].numpy(), sigma=[2, 2]) * 59.5238 * 10
+        #)
         # draw_label_img(label, img)
         """
         x_old, y_old = label[:, 1:-1].T
@@ -185,7 +185,8 @@ class FociDataset(data.Dataset):
         #    label = label.permute(
         #        1, 0, 2
         #    )  # TODO: check this. Why do I need to swap them??
-        label = label.permute(1, 0, 2)
-        img = img.permute(2, 0, 1)
-        label = label.permute(2, 0, 1)
+        
+        img = img.permute(2, 0, 1).float()
+        label = label.permute(2, 0, 1).float()
+
         return img, label

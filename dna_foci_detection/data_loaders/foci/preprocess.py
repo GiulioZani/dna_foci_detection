@@ -15,6 +15,23 @@ import cv2 as cv
 from tqdm import tqdm
 
 
+def draw_label(raw_label, img = None, color=(1,)):
+    img = img if img is not None else t.zeros(292, 292, 1)
+    if img.shape[-1] > 3:
+        img = img.permute(1, 2, 0)
+    max_radius = 292
+    label = raw_label.clone()
+    #ipdb.set_trace()
+    label[:, -1] = label[:, -1] * max_radius
+    #(
+    #    label[:, -1] * (max_radius - min_radius) + min_radius
+    #) * img.shape[0]
+    label = t.round(label).int().tolist()
+    img = np.array(img.tolist())
+    for x, y, r in label:
+        img = cv.circle(img, (x, y), radius=r, color=color, thickness=-1)
+    return t.from_numpy(img)
+
 def main():
     sys.path.insert(0, "../utils")
     # from utils.utils import plot_img_with_labels
@@ -63,11 +80,15 @@ def main():
             label_file_name = os.path.join(
                 src_labels, os.path.basename(img_filename.replace(".png", ".json")),
             )
-            label = t.zeros(2, img.shape[1], img.shape[2])
+            label = t.zeros(1, img.shape[1], img.shape[2])
             # label = t.zeros(60, 4)
             if os.path.exists(label_file_name):
                 raw_data = json.loads(open(label_file_name).read())
                 raw_label = [row for row in raw_data if not None in row]
+                if len(raw_label) > 0:
+                    label = draw_label(t.tensor(raw_label)).permute(2, 0, 1)
+                #plt.imshow(label)
+                #plt.show()
                 """
                 if len(raw_label) > 0:
                     read_label = t.tensor(raw_label)
@@ -80,11 +101,11 @@ def main():
                     # crop the image by: [20:-20,15:-15]
                     # plot_img_with_labels(img, label)
                 """
-                max_r = 0.01544943820224719
-                min_r = 0.0014044943820224719
-                for x, y, r in raw_label:
-                    label[0, x, y] = 1
-                    label[1, x, y] = (r - min_r) / (max_r - min_r)
+                #max_r = 0.01544943820224719
+                #min_r = 0.0014044943820224719
+                #for x, y, r in raw_label:
+                #    label[0, x, y] = 1
+                #    label[1, x, y] = (r - min_r) / (max_r - min_r)
 
                 # draw_label_img(label, img)
 
