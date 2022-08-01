@@ -1,6 +1,6 @@
 {
     "project": "dna_foci_detection",
-	"results_folder":"/content/drive/MyDrive/dna_foci_results",
+	"results_folder":"/mnt/dna_foci_results",
     "override_params": {
         "enabled": false,
         "cuda": true

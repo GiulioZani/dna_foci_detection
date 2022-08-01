@@ -150,48 +150,8 @@ class FociDataset(data.Dataset):
                 r[1] : r[1] + out_size[1],
                 :,  # TODO: check this. Why do I need to swap the order of the two indices???
             ]
-        # label[:, :, 0] = t.from_numpy(
-        #    gaussian_filter(label[:, :, 0].numpy(), sigma=[2, 2]) * 59.5238 * 10
-        # )
-        # draw_label_img(label, img)
-        """
-        x_old, y_old = label[:, 1:-1].T
-        x = t.clip(x_old * 292 - r[1], min=0)
-        y = t.clip(y_old * 292 - r[0], min=0)
-        filter_indices = (x > out_size[0]) | (y > out_size[1])
-        x[filter_indices] = 0
-        y[filter_indices] = 0
-        label[filter_indices, 0] = 0
-        x /= out_size[0]
-        y /= out_size[1]
-        label[:, 1] = x
-        label[:, 2] = y
-        """
-        # nonzero_labels = label[label[:, 0] != 0]
-        # label_img = t.zeros(img.shape[0], img.shape[1], 2)
-        """
-        for nonzero_label in nonzero_labels:
-            label_img[
-                int(img.shape[0] * nonzero_label[1]),
-                int(img.shape[1] * nonzero_label[2]),
-                0,
-            ] = 1
-            label_img[
-                int(img.shape[0] * nonzero_label[1]),
-                int(img.shape[1] * nonzero_label[2]),
-                1,
-            ] = nonzero_label[-1]
-        _, indices = t.sort(
-            label[:, -1], descending=True
-        )  # sort them in descending order of radius
-        label = label[indices]
-        """
         if self.split == "train":
             img, label = augmentation(img, label)
-        # else:
-        #    label = label.permute(
-        #        1, 0, 2
-        #    )  # TODO: check this. Why do I need to swap them??
 
         img = img.permute(2, 0, 1).float()
         label = label.permute(2, 0, 1).float()

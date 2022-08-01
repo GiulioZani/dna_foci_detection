@@ -11,30 +11,6 @@ import numpy as np
 import cv2 as cv
 
 
-def fix_foci(img):
-    img = img.copy()
-    img[img < 1] = 0
-    visited = set()
-    for i in range(img.shape[0]):
-        for j in range(img.shape[1]):
-            if img[i, j] > 0:
-                img[i, j] = 1
-                visited.add((i, j))
-                for x, y in [(i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)]:
-                    if (x, y) in visited:
-                        continue
-                    if (
-                        x < 0
-                        or y < 0
-                        or x >= img.shape[0]
-                        or y >= img.shape[1]
-                    ):
-                        continue
-                    img[x, y] = 1
-                    visited.add((x, y))
-    return img
-
-
 def max_distance(coords, debug=False):
     max_x = t.max(coords[0])
     max_y = t.max(coords[1])
@@ -79,7 +55,7 @@ def draw_label(raw_label, img, color=(1, 1, 1)):
     return img
 
 
-def sharpen(image):
+def watershed_label(image):
     from scipy import ndimage as ndi
     from skimage.segmentation import watershed
     from skimage.feature import peak_local_max
@@ -93,19 +69,6 @@ def sharpen(image):
     mask[tuple(coords.T)] = True
     markers, _ = ndi.label(mask)
     labels = watershed(-distance, markers, mask=image)
-    """
-    plt.close()
-    plt.clf()
-    fig, axes = plt.subplots(ncols=3, figsize=(9, 3), sharex=True, sharey=True)
-    ax = axes.ravel()
-    ax[0].imshow(image, cmap=plt.cm.gray)
-    ax[0].set_title("Overlapping objects")
-    ax[1].imshow(-distance, cmap=plt.cm.gray)
-    ax[1].set_title("Distances")
-    ax[2].imshow(labels, cmap=plt.cm.nipy_spectral)
-    ax[2].set_title("Separated objects")
-    plt.show()
-    """
     return t.from_numpy(labels)
 
 
@@ -129,12 +92,12 @@ def visualize_predictions(
         # print(f"{img.shape=}")
         # print(f"{img.shape=}")
         sharpened_label = label[0].detach().cpu().numpy()
-        sharpened_label = sharpen(sharpened_label)
+        sharpened_label = watershed_label(sharpened_label)
 
         sharpened_disc_label = (
             (pred_label[0].detach().cpu() > 0.5).float().numpy()
         )
-        sharpened_pred_label = sharpen(sharpened_disc_label)
+        sharpened_pred_label = watershed_label(sharpened_disc_label)
         img = t.from_numpy(
             draw_label_img(
                 sharpened_pred_label.cpu(), img.cpu().numpy(), color=(1, 0, 1)
