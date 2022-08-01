@@ -22,7 +22,7 @@
         }
     },
     "train": "base_classification_model",
-    "model": {
+    "folder": {
         "classifier": {
             "module": "unet2d",
             "model": "UNet2D",
