@@ -11,6 +11,10 @@ import matplotlib.pyplot as plt
 import json
 
 
+images_path = "test_images"  # "/mnt/deep_foci/new_images"
+out_path = "test_label"
+
+
 def max_distance(coords, debug=False):
     max_x = t.max(coords[0])
     max_y = t.max(coords[1])
@@ -63,8 +67,6 @@ def run(model):
     """
     Labels new images using the trained model.
     """
-    images_path = "test_images"  # "/mnt/deep_foci/new_images"
-    out_path = "test_label"
     if not os.path.exists(out_path):
         os.makedirs(out_path)
     # Set the model to eval mode
@@ -90,8 +92,11 @@ def run(model):
             ).float()
             pred_label = extract_label(predicted_label_img)
             new_name = os.path.basename(image_path).replace(".png", ".json")
-            print(pred_label)
+            pred_label_dicts = [
+                dict(x=x[0], y=x[1], r=x[2]) for x in pred_label.tolist()
+            ]
+            print(json.dumps(pred_label_dicts, indent=4))
             with open(os.path.join(out_path, new_name), "w") as f:
-                json.dump(pred_label.tolist(), f)
+                json.dump(pred_label_dicts, f, indent=4)
             print(f"Created file {new_name}")
             # Get the index of the max log-probability
