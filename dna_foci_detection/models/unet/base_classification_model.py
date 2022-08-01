@@ -289,6 +289,7 @@ class Model(LightningModule):
         loss = self.loss(y_pred, labels)
         if batch_idx == 0:
             print(f"{y_pred.max().item()=} {y_pred.min().item()=}")
+            """
             visualize_predictions(
                 x,
                 labels,
@@ -296,6 +297,8 @@ class Model(LightningModule):
                 os.path.join(self.params.save_path, "train_pred.png"),
                 epoch=self.current_epoch,
             )
+            print("visualized!!")
+            """
         return {"loss": loss}
 
     def training_epoch_end(self, outputs):
@@ -313,7 +316,7 @@ class Model(LightningModule):
                 x,
                 labels,
                 y_pred,
-                os.path.join(self.params.save_path, "pred.png"),
+                os.path.join(self.params.save_path, "val_pred.png"),
                 epoch=self.current_epoch,
             )
         return {
@@ -348,7 +351,7 @@ class Model(LightningModule):
                 x,
                 labels,
                 y_pred,
-                os.path.join(self.params.save_path, "pred.png"),
+                os.path.join(self.params.save_path, "test_pred.png"),
                 epoch=self.current_epoch,
                 plot=True,
             )
