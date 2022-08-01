@@ -173,7 +173,7 @@ def visualize_predictions(
 
     plt.axis("off")
     plt.tight_layout()
-    plt.suptitle(f"Epoch {epoch}")
+    plt.suptitle(f"Epoch {epoch}, Green = true label")
     plt.savefig(save_path, dpi=500) if not plot else plt.show()
     plt.clf()
     plt.close()
