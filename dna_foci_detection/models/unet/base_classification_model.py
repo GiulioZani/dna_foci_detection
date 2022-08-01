@@ -149,7 +149,7 @@ def visualize_predictions(
         fig = axes[index].imshow(img)
         fig.axes.get_xaxis().set_visible(False)
         fig.axes.get_yaxis().set_visible(False)
-        axes[index].set_title(f"Figure")
+        # axes[index].set_title(f"")
         """
 
         ax = axes[1][index]
