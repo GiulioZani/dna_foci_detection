@@ -130,22 +130,29 @@ class FociDataset(data.Dataset):
             self.h5data = h5py.File(self.hdf5_filename, "r")
 
         filename = self.filenames[idx]
-        img = t.from_numpy(self.h5data[filename + "_image"][...]).permute(1, 2, 0)
-        label = t.from_numpy(self.h5data[filename + "_label"][...]).permute(1, 2, 0)
+        img = t.from_numpy(self.h5data[filename + "_image"][...]).permute(
+            1, 2, 0
+        )
+        label = t.from_numpy(self.h5data[filename + "_label"][...]).permute(
+            1, 2, 0
+        )
         in_size = img.shape
         out_size = self.crop_size
-        r = [t.randint(in_size[i] - out_size[i], (1,))[0] for i in range(2)]
-        img = img[
-            r[0] : r[0] + out_size[0], r[1] : r[1] + out_size[1], :,
-        ]
-        label = label[
-            r[0] : r[0] + out_size[0],
-            r[1] : r[1] + out_size[1],
-            :,  # TODO: check this. Why do I need to swap the order of the two indices???
-        ]
-        #label[:, :, 0] = t.from_numpy(
+        if not self.split == "test":
+            r = [
+                t.randint(in_size[i] - out_size[i], (1,))[0] for i in range(2)
+            ]
+            img = img[
+                r[0] : r[0] + out_size[0], r[1] : r[1] + out_size[1], :,
+            ]
+            label = label[
+                r[0] : r[0] + out_size[0],
+                r[1] : r[1] + out_size[1],
+                :,  # TODO: check this. Why do I need to swap the order of the two indices???
+            ]
+        # label[:, :, 0] = t.from_numpy(
         #    gaussian_filter(label[:, :, 0].numpy(), sigma=[2, 2]) * 59.5238 * 10
-        #)
+        # )
         # draw_label_img(label, img)
         """
         x_old, y_old = label[:, 1:-1].T
@@ -179,13 +186,13 @@ class FociDataset(data.Dataset):
         )  # sort them in descending order of radius
         label = label[indices]
         """
-        # if self.split == "train":
-        #    img, label = augmentation(img, label)
+        if self.split == "train":
+            img, label = augmentation(img, label)
         # else:
         #    label = label.permute(
         #        1, 0, 2
         #    )  # TODO: check this. Why do I need to swap them??
-        
+
         img = img.permute(2, 0, 1).float()
         label = label.permute(2, 0, 1).float()
 
