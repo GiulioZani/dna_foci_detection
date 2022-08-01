@@ -35,33 +35,6 @@ def fix_foci(img):
     return img
 
 
-"""
-def draw_label_img(label_img, img, color=(1, 0, 1)):
-    label_img = t.tensor(label_img.tolist())
-    if label_img.shape[0] == 2:
-        label_img = label_img.permute(1, 2, 0)
-    if img.shape[0] == 3:
-        img = img.permute(1, 2, 0)
-    assert (
-        label_img.shape[:-1] == img.shape[:-1]
-    ), f"{label_img.shape=} not compatible with {img.shape=}"
-    indices = t.where(
-        (label_img[:, :, 0] >= label_img[:, :, 0].max())
-        & (label_img[:, :, 1] > 0)
-    )  # confidence > 0.8 and radius > 0
-    indices = t.tensor([indices[0].tolist(), indices[1].tolist()]).T
-    labels = []
-    for x, y in indices:
-        labels.append([label_img[x, y, 0], x, y, label_img[x, y, 1]])
-    labels = t.tensor(labels)
-    # if len(labels) > 0:
-    #    new_img = draw_label(labels, img, color)
-    #    plt.imshow(new_img)
-    #    plt.show()
-    return draw_label(labels, img, color) if len(labels) > 0 else img
-"""
-
-
 def max_distance(coords, debug=False):
     max_x = t.max(coords[0])
     max_y = t.max(coords[1])
@@ -104,70 +77,6 @@ def draw_label(raw_label, img, color=(1, 1, 1)):
     for x, y, r in label:
         img = cv.circle(img, (y, x), radius=r, color=color, thickness=1)
     return img
-
-
-"""
-def sharpen(img):
-    # kernel = np.array([[-1,-1,-1, -1, -1], [-1, -1, 15, -1, -1], [-1, -1, -1, -1, -1]])
-    size = 3
-    # kernel = np.zeros((size, size)) - 1
-    # kernel[size // 2, size //2] = int(size**2 - 1)
-    # img = cv.filter2D(
-    #    src=img, ddepth=-1, kernel=kernel
-    # )
-    size = 17
-    kernel = np.zeros((size, size)) - 1
-    kernel[size // 2, size // 2] = int(size ** 2 - 1)
-    img = cv.filter2D(src=img, ddepth=-1, kernel=kernel)
-
-    # img = cv.filter2D(
-    #    src=img, ddepth=-1, kernel=kernel
-    # )
-    # img = cv.filter2D(
-    #    src=img, ddepth=-1, kernel=kernel
-    # )
-    # sharpened_label = cv.filter2D(
-    #    src=sharpened_label, ddepth=-1, kernel=kernel
-    # )
-    # img = np.clip(img, 0, img.max())
-    return (img - img.min()) / (img.max() - img.min())
-"""
-
-"""
-def sharpen(img):
-
-    # img = img.img_to_array(img, dtype="uint8")
-    color_img = cv.cvtColor(img, cv.COLOR_GRAY2RGB).astype(np.uint8)
-    img = img.astype(np.uint8)
-    # noise removal
-    kernel = np.ones((3, 3), np.uint8)
-    opening = cv.morphologyEx(img, cv.MORPH_OPEN, kernel, iterations=2)
-    ipdb.set_trace()
-    # sure background area
-    sure_bg = cv.dilate(opening, kernel, iterations=3)
-
-    # Finding sure foreground area
-    dist_transform = cv.distanceTransform(opening, cv.DIST_L2, 5)
-    ret, sure_fg = cv.threshold(
-        dist_transform, 0.7 * dist_transform.max(), 255, 0
-    )
-
-    # Finding unknown region
-    sure_fg = np.uint8(sure_fg)
-    unknown = cv.subtract(sure_bg, sure_fg)
-    # Marker labelling
-    ret, markers = cv.connectedComponents(sure_fg)
-
-    # Add one to all labels so that sure background is not 0, but 1
-    markers = markers + 1
-
-    # Now, mark the region of unknown with zero
-    markers[unknown == 255] = 0
-    markers = cv.watershed(color_img, markers)
-    color_img[markers == -1] = [255, 0, 0]
-    ipdb.set_trace()
-    return color_img
-"""
 
 
 def sharpen(image):
@@ -353,7 +262,7 @@ class Model(LightningModule):
                 y_pred,
                 os.path.join(self.params.save_path, "test_pred.png"),
                 epoch=self.current_epoch,
-                plot=True,
+                # plot=True,
             )
         return {
             "test_loss": loss,
